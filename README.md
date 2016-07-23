@@ -1,5 +1,5 @@
 # stumbly
-Exploring reinforcment learning, specifically q function approximation with a two layer neural network. 
+Exploring reinforcment learning, specifically q function approximation with a two (or more!) layer neural network. 
 
 All to help stumbly learn to walk! :-)
 

@@ -3,7 +3,9 @@ Exploring reinforcment learning, specifically q function approximation with a tw
 
 All to help stumbly learn to walk! :-)
 
-You need numpy, pygame and pybox2d to run.
+You need jupyter notebook, numpy, pygame and pybox2d to run.
+
+jupyter notebook: http://jupyter.org/
 
 pygame: http://www.pygame.org/download.shtml
 

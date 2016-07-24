@@ -3,6 +3,14 @@ Exploring reinforcment learning, specifically q function approximation with a tw
 
 All to help stumbly learn to walk! :-)
 
+Includes:
+A quick and dirty creature creator/editor using pybox2d for physics and pygame for rendering.
+
+Checkout the notebooks to see how to run everything. Happy to hear any improvements/suggestions.
+
+Currently adding back in the RL code, was cleaning up editor and engine code.
+
+
 You need jupyter notebook, numpy, pygame and pybox2d to run.
 
 jupyter notebook: http://jupyter.org/

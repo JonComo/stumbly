@@ -9,15 +9,16 @@ All to help stumbly learn to walk! :-)
 Includes:
 A quick and dirty creature creator/editor using pybox2d for physics and pygame for rendering. Checkout the notebooks to see how to run everything. I'm currently adding back in the RL code, was cleaning up editor and engine code.
 
+Here's a [video](https://www.youtube.com/watch?v=uZbVM4TP0IY) of the creature creator.
 
-You need jupyter notebook, numpy, pygame and pybox2d to run.
+You need these things to run it all:
 
-jupyter notebook: http://jupyter.org/
+[jupyter notebook](http://jupyter.org/)
 
-pygame: http://www.pygame.org/download.shtml
+[pygame](http://www.pygame.org/download.shtml)
 
-pybox2d: https://github.com/pybox2d/pybox2d
+[pybox2d](https://github.com/pybox2d/pybox2d)
 
-numpy: http://www.scipy.org/scipylib/download.html
+[numpy](http://www.scipy.org/scipylib/download.html)
 
 Happy to hear any improvements/suggestions.

@@ -3,6 +3,7 @@
 Exploring reinforcment learning, specifically q function approximation with a two (or more!) layer neural network. 
 
 ![Go stumbly go](stumbling.gif?raw=true "Stumbly")
+
 All to help stumbly learn to walk! :-)
 
 Includes:

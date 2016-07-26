@@ -6,6 +6,7 @@ from Box2D import b2Filter
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, circleShape, \
     fixtureDef, transform, revoluteJoint)
 
+import json
 from uuid import uuid4
 
 class Engine(object):
@@ -149,6 +150,45 @@ class Engine(object):
                 )
             return joint
         return None
+
+    def body_data(self, body):
+        return {'_type':'body', 'p': (body.position[0], body.position[1]), \
+            'size': body.userData['size'], 'angle': body.angle, 'uuid': body.userData['uuid']}
+
+    def joint_data(self, joint):
+        return {'_type': 'joint', 'p': (joint.anchorA[0], joint.anchorA[1]), 'a_uuid': joint.bodyA.userData['uuid'], \
+            'b_uuid': joint.bodyB.userData['uuid']}
+
+    def load_body(self, d):
+        self.add_dynamic_body(self.to_screen(d['p']), (d['size'][0] * self.ppm, \
+            d['size'][1] * self.ppm), angle=d['angle'], uuid=d['uuid'])
+
+    def load_joint(self, d):
+        self.pin_at(self.to_screen(d['p']), a_uuid=d['a_uuid'], b_uuid=d['b_uuid'])
+
+    def save(self, filename='model.json'):
+        data = []
+        for body in self.world.bodies:
+            if body.userData:
+                data.append(self.body_data(body))
+        for joint in self.world.joints:
+            data.append(self.joint_data(joint))
+
+        with open(filename, 'w') as fp:
+            json.dump(data, fp, sort_keys=True, indent=4)
+
+        print('File saved as: {}'.format(filename))
+
+    def load(self, filename='model.json'):
+        with open(filename, 'r') as fp:
+            data = json.load(fp)
+            for d in data:
+                if d['_type'] == 'body':
+                    self.load_body(d)
+                elif d['_type'] == 'joint':
+                    self.load_joint(d)
+
+        print('File loaded: {}'.format(filename))
 
 if __name__ == "__main__":
     print('Welcome to the experimental pygame + pybox2d engine!')

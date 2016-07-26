@@ -22,3 +22,5 @@ You need these things to run it all:
 [numpy](http://www.scipy.org/scipylib/download.html)
 
 Happy to hear any improvements/suggestions.
+
+Unfortunately there seems to be some issues with pygame and mouse input on Mac OS X El Capitan. I've only tested this project on Ubuntu 14.04 and 16.04. 

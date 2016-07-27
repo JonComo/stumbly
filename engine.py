@@ -2,7 +2,7 @@ import pygame
 from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, MOUSEBUTTONDOWN, MOUSEBUTTONUP, \
     K_RIGHT, K_LEFT, K_UP, K_DOWN, K_r, K_s, K_p)
 
-from Box2D import b2Filter
+from Box2D import (b2Filter, b2_pi)
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, circleShape, \
     fixtureDef, transform, revoluteJoint)
 
@@ -10,7 +10,8 @@ import json
 from uuid import uuid4
 
 class Engine(object):
-    def __init__(self, ppm=20, fps=60, width=640, height=480, gravity=(0, 0), caption="Window"):
+    def __init__(self, ppm=20, fps=60, width=640, height=480, gravity=(0, 0), \
+     caption="Window", joint_limit=False, lower_angle=-.5*b2_pi, upper_angle=.5*b2_pi, damping=0.0):
         pygame.init()
         self.ppm = ppm # pixels per meter
         self.width = width
@@ -21,6 +22,10 @@ class Engine(object):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode((self.width, self.height), 0, 32)
         self.world = world(gravity=gravity, doSleep=False)
+        self.damping = damping
+        self.joint_limit = joint_limit
+        self.lower_angle = lower_angle
+        self.upper_angle = upper_angle
         self.mouse = (0, 0)
         pygame.display.set_caption(caption)
 
@@ -116,11 +121,11 @@ class Engine(object):
     def add_dynamic_body(self, p, size, angle=0, uuid=None):
         body = self.world.CreateDynamicBody(position=self.to_pybox2d(p), angle=angle)
         body.userData = {}
+        body.linearDamping = self.damping
+        body.angularDamping = self.damping
         uuid = uuid if uuid else str(uuid4())
         body.userData['uuid'] = uuid
         self.set_box(body, size)
-        body.linearDamping = 10.0
-        body.angularDamping = 10.0
         return body
 
     def set_box(self, body, size):
@@ -147,16 +152,19 @@ class Engine(object):
                 maxMotorTorque = 1000.0,
                 motorSpeed = 0.0,
                 enableMotor = True,
+                upperAngle = self.upper_angle,
+                lowerAngle = self.lower_angle,
+                enableLimit = self.joint_limit
                 )
             return joint
         return None
 
     def body_data(self, body):
-        return {'_type':'body', 'p': (body.position[0], body.position[1]), \
+        return {'p': (body.position[0], body.position[1]), \
             'size': body.userData['size'], 'angle': body.angle, 'uuid': body.userData['uuid']}
 
     def joint_data(self, joint):
-        return {'_type': 'joint', 'p': (joint.anchorA[0], joint.anchorA[1]), 'a_uuid': joint.bodyA.userData['uuid'], \
+        return {'p': (joint.anchorA[0], joint.anchorA[1]), 'a_uuid': joint.bodyA.userData['uuid'], \
             'b_uuid': joint.bodyB.userData['uuid']}
 
     def load_body(self, d):
@@ -166,13 +174,19 @@ class Engine(object):
     def load_joint(self, d):
         self.pin_at(self.to_screen(d['p']), a_uuid=d['a_uuid'], b_uuid=d['b_uuid'])
 
+    def settings_data(self):
+        return {}
+
+    def load_settings(self, d):
+        pass
+
     def save(self, filename='model.json'):
-        data = []
+        data = {'_settings': self.settings_data(), 'bodies': [], 'joints': []}
         for body in self.world.bodies:
             if body.userData:
-                data.append(self.body_data(body))
+                data['bodies'].append(self.body_data(body))
         for joint in self.world.joints:
-            data.append(self.joint_data(joint))
+            data['joints'].append(self.joint_data(joint))
 
         with open(filename, 'w') as fp:
             json.dump(data, fp, sort_keys=True, indent=4)
@@ -182,11 +196,11 @@ class Engine(object):
     def load(self, filename='model.json'):
         with open(filename, 'r') as fp:
             data = json.load(fp)
-            for d in data:
-                if d['_type'] == 'body':
-                    self.load_body(d)
-                elif d['_type'] == 'joint':
-                    self.load_joint(d)
+            self.load_settings(data['_settings'])
+            for b in data['bodies']:
+                self.load_body(b)
+            for j in data['joints']:
+                self.load_joint(j)
 
         print('File loaded: {}'.format(filename))
 

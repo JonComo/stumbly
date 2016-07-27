@@ -1,20 +1,21 @@
 import numpy as np
 
 class Agent(object):
-    def __init__(self, features=2, actions=2, eps=.1, learning_rate=0.01, max_memory=5000):
+    def __init__(self, features=2, actions=2, hdim=4, eps=.1, learning_rate=0.01, gamma=0.95, max_memory=5000):
         self.actions = actions
         self.features = features
+        self.hdim = hdim
         self.learning_rate = learning_rate
         self.max_memory = max_memory
-        
-        self.avg_r = 0.0 # average reward
+        self.gamma = gamma
+
         self.A = range(self.actions)
         self.M = [] # memory (s1, a1, r, s2, a2) tuples
         self.init_networks()
         
     def init_networks(self):
-        self.qnet = NN(xdim=self.features, hdim=4, ydim=self.actions) # action-value prediction network
-        self.vnet = NN(xdim=self.features, hdim=4, ydim=1) # value prediction network
+        self.qnet = NN(xdim=self.features, hdim=self.hdim, ydim=self.actions) # action-value prediction network
+        self.vnet = NN(xdim=self.features, hdim=self.hdim, ydim=1) # value prediction network
         
     def q_approx(self, state):
         return self.qnet.ff(state)
@@ -47,7 +48,7 @@ class Agent(object):
         s1_q = self.q_approx(xp['s1'])
 
         target = s1_q.copy()
-        target[0, xp['a1']] = xp['r'] + GAMMA * np.max(s2_q[0])
+        target[0, xp['a1']] = xp['r'] + self.gamma * np.max(s2_q[0])
 
         deltas = s1_q - target
         self.qnet.bp(deltas, self.learning_rate)
@@ -57,13 +58,12 @@ class Agent(object):
         v2 = self.v_approx(xp['s2'])
         v1 = self.v_approx(xp['s1'])
 
-        target = xp['r'] + GAMMA * v2
+        target = xp['r'] + self.gamma * v2
         
         delta = v1 - target
         self.vnet.bp(delta, self.learning_rate)
             
     def memorize(self, xp):
-        self.avg_r += 0.001 * (xp['r'] - self.avg_r)
         if len(self.M) >= self.max_memory:
             self.M[np.random.randint(self.max_memory)] = xp
         else:
@@ -100,7 +100,7 @@ class Layer(object):
         self.ap = ap
         self.xdim = xdim
         self.ydim = ydim
-        self.W = np.random.randn(xdim + 1, ydim)
+        self.W = np.random.randn(xdim + 1, ydim) * .01
     def ff(self, x):
         self.x = bias_add(x)
         self.z = self.x.dot(self.W)
@@ -116,16 +116,16 @@ class Layer(object):
 class NN(object):
     def __init__(self, xdim, hdim, ydim):
         self.l1 = Layer(xdim, hdim)
-        self.l2 = Layer(hdim, hdim)
-        self.l3 = Layer(hdim, ydim)
+        self.l2 = Layer(hdim, ydim)
+        #self.l3 = Layer(hdim, ydim)
     
     def ff(self, x):
         h1 = self.l1.ff(x).h
         h2 = self.l2.ff(h1).h
-        h3 = self.l3.ff(h2).h
-        return h3
+        #h3 = self.l3.ff(h2).h
+        return h2
     
     def bp(self, deltas, learning_rate=0.1):
-        self.l3.bp(deltas, learning_rate)
-        self.l2.bp(self.l3.dx, learning_rate)
+        #self.l3.bp(deltas, learning_rate)
+        self.l2.bp(deltas, learning_rate)
         self.l1.bp(self.l2.dx, learning_rate)

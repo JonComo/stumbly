@@ -9,18 +9,20 @@ import os
 S_STEP = 5 # shape step size
 
 class Editor(object):
-    def __init__(self, filename='model.json'):
-        self.filename = filename
-        self.engine = Engine(width=1280, height=720, gravity=(0, 0), caption='Editor')
+    def __init__(self):
+        self.engine = Engine(width=1280, height=720, gravity=(0, 0), damping=10.0, caption='Editor')
         self.ground = self.engine.add_static_body(p=(self.engine.width/2, self.engine.height-10), \
             size=(self.engine.width, 30))
         self.selected = None # selected physics body
         self.mouse_joint = None
 
+    def load(self, filename='model.json'):
+        self.filename = filename
         # load if there's a file
         if self.filename and os.path.isfile(self.filename):
             self.engine.load(self.filename)
 
+    def run(self):
         self.engine.run(callback=self.callback, mouse_pressed=self.mouse_pressed, \
             mouse_released=self.mouse_released, key_pressed=self.key_pressed)
 
@@ -72,4 +74,6 @@ if __name__ == "__main__":
     print('- Arrow keys to change the size of the selected body (width, height)')
     print('- \'S\' to save models as model.json in the current directory')
 
-    editor = Editor('model.json')
+    editor = Editor()
+    editor.load('model.json')
+    editor.run()

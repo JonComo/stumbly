@@ -28,12 +28,20 @@ class Agent(object):
         v = self.v_approx(state)
         return q - v[0, 0]
         
-    def sample_action(self, qs):
+    def sample_action_eps(self, qs):
         if all(qs[0, 0] == qs[0, :]): # if they're all the same
             return np.random.choice(self.A)
         
         dist = [self.eps/self.actions] * self.actions
         dist[np.argmax(qs[0])] += 1.0 - self.eps
+        return np.random.choice(self.A, p=dist)
+
+    def sample_action_softmax(self, qs):
+        if all(qs[0, 0] == qs[0, :]): # if they're all the same
+            return np.random.choice(self.A)
+        
+        dist = [np.exp(q) for q in qs[0, :]]
+        dist /= np.sum(dist) 
         return np.random.choice(self.A, p=dist)
     
     def train(self, iters=1, batches=10):
@@ -103,7 +111,7 @@ class Layer(object):
         self.ap = ap
         self.xdim = xdim
         self.ydim = ydim
-        self.W = np.random.randn(xdim + 1, ydim) * .001
+        self.W = np.random.randn(xdim + 1, ydim) * .01
         self.grad = np.zeros_like(self.W)
     def ff(self, x):
         self.x = bias_add(x)

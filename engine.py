@@ -207,6 +207,11 @@ class Engine(object):
 
         print('File loaded: {}'.format(filename))
 
+    def clear_all_but_ground(self):
+        for b in self.world.bodies:
+            if b.userData:
+                self.world.DestroyBody(b)
+
 if __name__ == "__main__":
     print('Welcome to the experimental pygame + pybox2d engine!')
     print('- You most likely want to import this as a module')

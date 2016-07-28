@@ -16,6 +16,7 @@ class Agent(object):
     def init_networks(self):
         self.qnet = NN(xdim=self.features, hdim=self.hdim, ydim=self.actions) # action-value prediction network
         self.vnet = NN(xdim=self.features, hdim=self.hdim, ydim=1) # value prediction network
+        self.policy_w = np.random.randn(self.actions, self.features)
         
     def q_approx(self, state):
         return self.qnet.ff(state)
@@ -41,8 +42,53 @@ class Agent(object):
             return np.random.choice(self.A)
         
         dist = [np.exp(q) for q in qs[0, :]]
-        dist /= np.sum(dist) 
+        dist /= np.sum(dist)
         return np.random.choice(self.A, p=dist)
+
+    def sample_action_policy(self, state):
+        # use policy_w to sample actions
+        return np.random.choice(self.A, p=self.policy_distribution(state))
+
+    def sample_action_memory(self, state):
+        r_max = float('-inf')
+        seen_as = []
+        seen_rs = []
+        for xp in self.M:
+            if np.array_equal(xp['s1'], state):
+                seen_as.append(xp['a1'])
+                seen_rs.append(xp['r'])
+
+        m = len(seen_as)
+        if m == 0:
+            print('didnt find an experience')
+            return np.random.choice(self.A)
+
+        dist = [self.eps/m] * m
+        dist[np.argmax(seen_as)] += 1.0 - self.eps
+        return np.random.choice(seen_as, p=dist)
+
+    def policy_features(self, state, a):
+        f = np.zeros([self.actions, self.features])
+        f[a, :] = state
+        return f
+
+    def policy_distribution(self, state):
+        dist = [np.exp(np.dot(state, self.policy_w[a, :]).T)[0] for a in self.A]
+        dist /= np.sum(dist)
+        return dist
+
+    def expected_features(self, state):
+        dist = np.array([self.policy_distribution(state)])
+        return np.multiply(dist.T, state)
+
+    def train_policy(self, iters=10, learning_rate=0.1):
+        for i in range(iters):
+            xp = self.M[np.random.randint(len(self.M))]
+            s1_q = self.q_approx(xp['s1'])
+            features = self.policy_features(xp['s1'], xp['a1'])
+            expected_features = self.expected_features(xp['s1'])
+            policy_grad = (features - expected_features) * s1_q[0, xp['a1']]
+            self.policy_w += policy_grad * learning_rate
     
     def train(self, iters=1, batches=10):
         for i in range(iters):

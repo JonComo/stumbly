@@ -10,7 +10,8 @@ S_STEP = 5 # shape step size
 
 class Editor(object):
     def __init__(self):
-        self.engine = Engine(width=1280, height=720, gravity=(0, 0), damping=10.0, caption='Editor')
+        self.engine = Engine(width=1280, height=720, gravity=(0, 0), \
+            linear_damping=10.0, angular_damping=10.0, caption='Editor')
         self.ground = self.engine.add_static_body(p=(self.engine.width/2, self.engine.height-10), \
             size=(self.engine.width, 30))
         self.selected = None # selected physics body

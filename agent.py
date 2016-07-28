@@ -36,11 +36,14 @@ class Agent(object):
         dist[np.argmax(qs[0])] += 1.0 - self.eps
         return np.random.choice(self.A, p=dist)
     
-    def train(self, iters=1):
+    def train(self, iters=1, batches=10):
         for i in range(iters):
-            xp = self.M[np.random.randint(len(self.M))]
-            self.train_qnet(xp)
-            self.train_vnet(xp)
+            for b in range(batches):
+                xp = self.M[np.random.randint(len(self.M))]
+                self.train_qnet(xp)
+                #self.train_vnet(xp)
+            self.qnet.apply_grad(self.learning_rate/float(batches))
+            #self.vnet.apply_grad(self.learning_rate)
             
     def train_qnet(self, xp):
         # train with SARSA
@@ -100,23 +103,26 @@ class Layer(object):
         self.ap = ap
         self.xdim = xdim
         self.ydim = ydim
-        self.W = np.random.randn(xdim + 1, ydim) * .01
+        self.W = np.random.randn(xdim + 1, ydim) * .001
+        self.grad = np.zeros_like(self.W)
     def ff(self, x):
         self.x = bias_add(x)
         self.z = self.x.dot(self.W)
         self.h = self.a(self.z) if self.a else self.z
         return self
-    def bp(self, deltas, learning_rate=0.1):
+    def bp(self, deltas):
         self.dz = np.multiply(deltas, self.ap(self.z)) if self.ap else deltas
-        self.grad = np.multiply(self.x.T, self.dz)
+        self.grad += np.multiply(self.x.T, self.dz)
         self.dx = self.W.dot(self.dz.T).T[:, :-1] # remove bias add
         
+    def apply_grad(self, learning_rate=0.1):
         self.W -= self.grad * learning_rate
+        self.grad[:] = 0.0
     
 class NN(object):
     def __init__(self, xdim, hdim, ydim):
         self.l1 = Layer(xdim, hdim)
-        self.l2 = Layer(hdim, ydim)
+        self.l2 = Layer(hdim, ydim, None, None)
         #self.l3 = Layer(hdim, ydim)
     
     def ff(self, x):
@@ -127,5 +133,9 @@ class NN(object):
     
     def bp(self, deltas, learning_rate=0.1):
         #self.l3.bp(deltas, learning_rate)
-        self.l2.bp(deltas, learning_rate)
-        self.l1.bp(self.l2.dx, learning_rate)
+        self.l2.bp(deltas)
+        self.l1.bp(self.l2.dx)
+
+    def apply_grad(self, learning_rate=0.1):
+        self.l2.apply_grad(learning_rate)
+        self.l1.apply_grad(learning_rate)

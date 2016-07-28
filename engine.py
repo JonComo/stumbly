@@ -11,7 +11,8 @@ from uuid import uuid4
 
 class Engine(object):
     def __init__(self, ppm=20, fps=60, width=640, height=480, gravity=(0, 0), \
-     caption="Window", joint_limit=False, lower_angle=-.5*b2_pi, upper_angle=.5*b2_pi, damping=0.0):
+     caption="Window", joint_limit=False, lower_angle=-.5*b2_pi, upper_angle=.5*b2_pi, \
+     linear_damping=0.0, angular_damping=0.0):
         pygame.init()
         self.ppm = ppm # pixels per meter
         self.width = width
@@ -22,7 +23,8 @@ class Engine(object):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode((self.width, self.height), 0, 32)
         self.world = world(gravity=gravity, doSleep=False)
-        self.damping = damping
+        self.linear_damping = linear_damping
+        self.angular_damping = angular_damping
         self.joint_limit = joint_limit
         self.lower_angle = lower_angle
         self.upper_angle = upper_angle
@@ -121,8 +123,8 @@ class Engine(object):
     def add_dynamic_body(self, p, size, angle=0, uuid=None):
         body = self.world.CreateDynamicBody(position=self.to_pybox2d(p), angle=angle)
         body.userData = {}
-        body.linearDamping = self.damping
-        body.angularDamping = self.damping
+        body.linearDamping = self.linear_damping
+        body.angularDamping = self.angular_damping
         uuid = uuid if uuid else str(uuid4())
         body.userData['uuid'] = uuid
         self.set_box(body, size)
@@ -132,11 +134,12 @@ class Engine(object):
         while len(body.fixtures) > 0:
             body.DestroyFixture(body.fixtures[0])
         size = self.size_to_pybox2d(size)
-        body.CreatePolygonFixture(box=size, density=1, friction=0.3, filter=b2Filter(groupIndex=-2))
+        body.CreatePolygonFixture(box=size, density=1, friction=0.9, filter=b2Filter(groupIndex=-2))
         body.userData['size'] = size
 
     def add_static_body(self, p, size):
-        return self.world.CreateStaticBody(position=self.to_pybox2d(p), shapes=polygonShape(box=self.size_to_pybox2d(size)))
+        return self.world.CreateStaticBody(position=self.to_pybox2d(p), \
+            shapes=polygonShape(box=self.size_to_pybox2d(size)))
 
     def pin_at(self, p, a_uuid=None, b_uuid=None):
         bodies = []
@@ -149,7 +152,7 @@ class Engine(object):
             b1 = bodies[0]
             b2 = bodies[1]
             joint = self.world.CreateRevoluteJoint(bodyA=b1, bodyB=b2, anchor=self.to_pybox2d(p), 
-                maxMotorTorque = 1000.0,
+                maxMotorTorque = 10000.0,
                 motorSpeed = 0.0,
                 enableMotor = True,
                 upperAngle = self.upper_angle,

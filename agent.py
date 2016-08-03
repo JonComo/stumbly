@@ -176,20 +176,21 @@ class Layer(object):
 class NN(object):
     def __init__(self, xdim, hdim, ydim):
         self.l1 = Layer(xdim, hdim)
-        self.l2 = Layer(hdim, ydim, None, None)
-        #self.l3 = Layer(hdim, ydim)
+        self.l2 = Layer(hdim, hdim)
+        self.l3 = Layer(hdim, ydim, None, None)
     
     def ff(self, x):
         h1 = self.l1.ff(x).h
         h2 = self.l2.ff(h1).h
-        #h3 = self.l3.ff(h2).h
-        return h2
+        h3 = self.l3.ff(h2).h
+        return h3
     
     def bp(self, deltas, learning_rate=0.1):
-        #self.l3.bp(deltas, learning_rate)
-        self.l2.bp(deltas)
+        self.l3.bp(deltas)
+        self.l2.bp(self.l3.dx)
         self.l1.bp(self.l2.dx)
 
     def apply_grad(self, learning_rate=0.1):
+        self.l3.apply_grad(learning_rate)
         self.l2.apply_grad(learning_rate)
         self.l1.apply_grad(learning_rate)

@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 class Agent(object):
     def __init__(self, features=2, actions=2, hdim=4, eps=.1, learning_rate=0.01, gamma=0.95, max_memory=5000):
@@ -14,15 +15,8 @@ class Agent(object):
         self.init_networks()
         
     def init_networks(self):
-        self.qnet = NN(xdim=self.features, hdim=self.hdim, ydim=self.actions) # action-value prediction network
-        self.vnet = NN(xdim=self.features, hdim=self.hdim, ydim=1) # value prediction network
-        self.policy_w = np.random.randn(self.actions, self.features)
-        
-    def q_approx(self, state):
-        return self.qnet.ff(state)
-    
-    def v_approx(self, state):
-        return self.vnet.ff(state)
+        self.qnet = NN(xdim=self.features, hdim=self.hdim, ydim=self.actions, learning_rate=self.learning_rate) # action-value prediction network
+        self.vnet = NN(xdim=self.features, hdim=self.hdim, ydim=1, learning_rate=self.learning_rate) # value prediction network
     
     def advantage(self, state):
         q = self.q_approx(state)
@@ -66,49 +60,37 @@ class Agent(object):
         dist = [self.eps/m] * m
         dist[np.argmax(seen_as)] += 1.0 - self.eps
         return np.random.choice(seen_as, p=dist)
-
-    def policy_features(self, state, a):
-        f = np.zeros([self.actions, self.features])
-        f[a, :] = state
-        return f
-
-    def policy_distribution(self, state):
-        dist = [np.exp(np.dot(state, self.policy_w[a, :]).T)[0] for a in self.A]
-        dist /= np.sum(dist)
-        return dist
-
-    def expected_features(self, state):
-        dist = np.array([self.policy_distribution(state)])
-        return np.multiply(dist.T, state)
-
-    def train_policy(self, iters=10, learning_rate=0.1):
-        for i in range(iters):
-            xp = self.M[np.random.randint(len(self.M))]
-            s1_q = self.q_approx(xp['s1'])
-            features = self.policy_features(xp['s1'], xp['a1'])
-            expected_features = self.expected_features(xp['s1'])
-            policy_grad = (features - expected_features) * s1_q[0, xp['a1']]
-            self.policy_w += policy_grad * learning_rate
     
-    def train(self, iters=1, batches=10):
+    def train(self, iters=100, batch_size=10, keep_prob=0.5):
         for i in range(iters):
-            for b in range(batches):
-                xp = self.M[np.random.randint(len(self.M))]
-                self.train_qnet(xp)
-                #self.train_vnet(xp)
-            self.qnet.apply_grad(self.learning_rate/float(batches))
-            #self.vnet.apply_grad(self.learning_rate)
-            
-    def train_qnet(self, xp):
-        # train with SARSA
-        s2_q = self.q_approx(xp['s2'])
-        s1_q = self.q_approx(xp['s1'])
+            x_batch, t_batch = self.q_batch(batch_size)
+            self.qnet.train(x_batch, t_batch, keep_prob)
 
-        target = s1_q.copy()
-        target[0, xp['a1']] = xp['r'] + self.gamma * np.max(s2_q[0])
+    def test(self, batch_size=10):
+        x_batch, t_batch = self.q_batch(batch_size)
+        return self.qnet.test(x_batch, t_batch)
 
-        deltas = s1_q - target
-        self.qnet.bp(deltas, self.learning_rate)
+    def q_batch(self, batch_size):
+        x_batch = np.zeros([batch_size, self.features])
+        t_batch = np.zeros([batch_size, self.actions])
+
+        i = np.random.randint(len(self.M))
+        for b in range(batch_size):
+            xp = self.M[i]
+            i += 1
+            if i >= len(self.M):
+                i = 0
+
+            s1_q = self.qnet.ff(xp['s1'])
+            s2_q = self.qnet.ff(xp['s2'])
+
+            target = s1_q.copy()
+            target[0, xp['a1']] = xp['r'] + self.gamma * np.max(s2_q[0])
+
+            x_batch[b] = xp['s1']
+            t_batch[b] = target
+
+        return x_batch, t_batch
         
     def train_vnet(self, xp):
         # train with SARS
@@ -126,11 +108,6 @@ class Agent(object):
         else:
             self.M.append(xp)
             
-    def visualize_q(self):
-        T = np.linspace(0, 2.0 * np.pi, 100)
-        q2 = np.array([self.q_approx(np.array([[np.sin(t), np.cos(t)]])) for t in T])
-        fig = plt.plot(T, q2[:,0])
-            
     def reset(self):
         self.init_networks()
         self.M = []
@@ -143,54 +120,40 @@ class Agent(object):
     def eps(self, value):
         self._eps = np.round(min(1.0, max(0.0, value)), 2)
 
-# Neural Network
-def bias_add(x):
-    return np.concatenate([x, [[1]]], axis=1) # bias add
-def act(x):
-    return np.tanh(x)
-def actp(x):
-    return 1.0 - np.tanh(x)**2
-
-class Layer(object):
-    def __init__(self, xdim, ydim, a=act, ap=actp):
-        self.a = a
-        self.ap = ap
-        self.xdim = xdim
-        self.ydim = ydim
-        self.W = np.random.randn(xdim + 1, ydim) * .01
-        self.grad = np.zeros_like(self.W)
-    def ff(self, x):
-        self.x = bias_add(x)
-        self.z = self.x.dot(self.W)
-        self.h = self.a(self.z) if self.a else self.z
-        return self
-    def bp(self, deltas):
-        self.dz = np.multiply(deltas, self.ap(self.z)) if self.ap else deltas
-        self.grad += np.multiply(self.x.T, self.dz)
-        self.dx = self.W.dot(self.dz.T).T[:, :-1] # remove bias add
-        
-    def apply_grad(self, learning_rate=0.1):
-        self.W -= self.grad * learning_rate
-        self.grad[:] = 0.0
-    
+# Neural Network using tensorflow
 class NN(object):
-    def __init__(self, xdim, hdim, ydim):
-        self.l1 = Layer(xdim, hdim)
-        self.l2 = Layer(hdim, hdim)
-        self.l3 = Layer(hdim, ydim, None, None)
-    
-    def ff(self, x):
-        h1 = self.l1.ff(x).h
-        h2 = self.l2.ff(h1).h
-        h3 = self.l3.ff(h2).h
-        return h3
-    
-    def bp(self, deltas, learning_rate=0.1):
-        self.l3.bp(deltas)
-        self.l2.bp(self.l3.dx)
-        self.l1.bp(self.l2.dx)
+    def __init__(self, xdim, hdim, ydim, learning_rate=0.001):
+        with tf.device('/cpu:0'):
+            self.x = tf.placeholder(tf.float32, [None, xdim])
+            self.t = tf.placeholder(tf.float32, [None, ydim])
+            self.keep_prob = tf.placeholder(tf.float32)
 
-    def apply_grad(self, learning_rate=0.1):
-        self.l3.apply_grad(learning_rate)
-        self.l2.apply_grad(learning_rate)
-        self.l1.apply_grad(learning_rate)
+            self.params = []
+            self.l1 = self.layer(self.x, xdim, hdim, tf.nn.relu)
+            self.l2 = self.layer(self.l1, hdim, hdim, tf.nn.relu)
+            self.y = self.layer(self.l2, hdim, ydim, tf.nn.tanh)
+
+            self.cost = tf.reduce_mean(tf.square(self.y - self.t))
+            self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cost)
+        
+        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+        self.session.run(tf.initialize_all_variables())
+        
+    def layer(self, in_data, xdim, ydim, act):
+        W = tf.Variable(tf.random_normal(shape=[xdim, ydim], stddev=0.01))
+        b = tf.Variable(tf.random_normal(shape=[ydim], stddev=0.01))
+        self.params += [W, b]
+        z = tf.matmul(in_data, W) + b
+        h = act(z) if act else z
+        h_drop = tf.nn.dropout(h, self.keep_prob)
+        return h_drop
+    
+    def train(self, x_data, t_data, keep_prob=0.5):
+        """x_data shape [BATCH, xdim], t_data shape [BATCH, ydim]"""
+        self.session.run(self.train_step, feed_dict={self.x: x_data, self.t: t_data, self.keep_prob: keep_prob})
+
+    def test(self, x_data, t_data):
+        return self.cost.eval(session=self.session, feed_dict={self.x: x_data, self.t: t_data, self.keep_prob: 1.0})
+        
+    def ff(self, x_data):
+        return self.y.eval(session=self.session, feed_dict={self.x: x_data, self.keep_prob: 1.0})

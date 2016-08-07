@@ -17,19 +17,24 @@ class Agent(object):
     def init_networks(self):
         self.qnet = NN(xdim=self.features, hdim=self.hdim, ydim=self.actions, learning_rate=self.learning_rate) # action-value prediction network
         self.vnet = NN(xdim=self.features, hdim=self.hdim, ydim=1, learning_rate=self.learning_rate) # value prediction network
-    
+        self.fatigue = np.zeros([1, self.actions])
+
     def advantage(self, state):
         q = self.q_approx(state)
         v = self.v_approx(state)
         return q - v[0, 0]
         
     def sample_action_eps(self, qs):
-        if all(qs[0, 0] == qs[0, :]): # if they're all the same
-            return np.random.choice(self.A)
-        
-        dist = [self.eps/self.actions] * self.actions
-        dist[np.argmax(qs[0])] += 1.0 - self.eps
-        return np.random.choice(self.A, p=dist)
+        if np.random.random_sample() > self.eps:
+            return np.argmax(qs[0])
+
+        return np.random.choice(self.A)
+
+    def sample_action_eps_fatigue(self, qs):
+        a = self.sample_action_eps(qs - self.fatigue * self.eps)
+        self.fatigue[0, a] = 1
+        self.fatigue *= 0.995
+        return a
 
     def sample_action_softmax(self, qs):
         if all(qs[0, 0] == qs[0, :]): # if they're all the same
@@ -129,19 +134,19 @@ class NN(object):
             self.keep_prob = tf.placeholder(tf.float32)
 
             self.params = []
-            self.l1 = self.layer(self.x, xdim, hdim, tf.nn.relu)
-            self.l2 = self.layer(self.l1, hdim, hdim, tf.nn.relu)
-            self.y = self.layer(self.l2, hdim, ydim, tf.nn.tanh)
+            self.l1 = self.layer(self.x, xdim, hdim, tf.nn.tanh)
+            #self.l2 = self.layer(self.l1, hdim, hdim, tf.nn.tanh)
+            self.y = self.layer(self.l1, hdim, ydim, None)
 
             self.cost = tf.reduce_mean(tf.square(self.y - self.t))
-            self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cost)
+            self.train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.cost)
         
         self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
         self.session.run(tf.initialize_all_variables())
         
     def layer(self, in_data, xdim, ydim, act):
-        W = tf.Variable(tf.random_normal(shape=[xdim, ydim], stddev=0.01))
-        b = tf.Variable(tf.random_normal(shape=[ydim], stddev=0.01))
+        W = tf.Variable(tf.random_normal(shape=[xdim, ydim], stddev=0.1))
+        b = tf.Variable(tf.random_normal(shape=[ydim], stddev=0.1))
         self.params += [W, b]
         z = tf.matmul(in_data, W) + b
         h = act(z) if act else z

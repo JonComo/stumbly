@@ -103,7 +103,8 @@ class Engine(object):
         pygame.quit()
 
     def add_static_body(self, p, size):
-        return self.world.CreateStaticBody(position=self.to_pybox2d(p), shapes=polygonShape(box=self.size_to_pybox2d(size)))
+        return self.world.CreateStaticBody(position=self.to_pybox2d(p), \
+            shapes=polygonShape(box=self.size_to_pybox2d(size), friction=1.0))
 
     def bodies_at(self, p):
         p = self.to_pybox2d(p)
@@ -134,7 +135,7 @@ class Engine(object):
         while len(body.fixtures) > 0:
             body.DestroyFixture(body.fixtures[0])
         size = self.size_to_pybox2d(size)
-        body.CreatePolygonFixture(box=size, density=1, friction=0.9, filter=b2Filter(groupIndex=-2))
+        body.CreatePolygonFixture(box=size, density=1, friction=1.0, filter=b2Filter(groupIndex=-2))
         body.userData['size'] = size
 
     def add_static_body(self, p, size):
@@ -161,6 +162,14 @@ class Engine(object):
                 )
             return joint
         return None
+
+    def add_sensor(self, pos):
+        """bodies = self.bodies_at(pos)
+        if len(bodies) > 0:
+            body = bodies[0]
+            body.CreateFixture(fixtureDef(shape=circleShape(pos=(10, 2), radius=1)))
+            print('created sensor')"""
+        raise NotImplementedError()
 
     def body_data(self, body):
         return {'p': (body.position[0], body.position[1]), \

@@ -1,5 +1,5 @@
 from engine import Engine
-from pygame import (K_RIGHT, K_LEFT, K_UP, K_DOWN, K_r, K_s, K_p)
+from pygame import (K_RIGHT, K_LEFT, K_UP, K_DOWN, K_r, K_s, K_p, K_f)
 
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, circleShape, fixtureDef, transform, revoluteJoint)
 from Box2D.b2 import (pi, filter)
@@ -61,6 +61,8 @@ class Editor(object):
                 s = (s[0], s[1] - S_STEP)
             s = (int(max(S_STEP, s[0])), int(max(S_STEP, s[1])))
             self.engine.set_box(self.selected, s)
+        if keys[K_f]:
+            self.engine.add_sensor(self.engine.mouse)
         if keys[K_p]:
             joint = self.engine.pin_at(self.engine.mouse)
         if keys[K_s]:

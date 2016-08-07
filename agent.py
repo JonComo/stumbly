@@ -79,12 +79,8 @@ class Agent(object):
         x_batch = np.zeros([batch_size, self.features])
         t_batch = np.zeros([batch_size, self.actions])
 
-        i = np.random.randint(len(self.M))
         for b in range(batch_size):
-            xp = self.M[i]
-            i += 1
-            if i >= len(self.M):
-                i = 0
+            xp = self.M[np.random.randint(len(self.M))]
 
             s1_q = self.qnet.ff(xp['s1'])
             s2_q = self.qnet.ff(xp['s2'])
@@ -135,7 +131,7 @@ class NN(object):
 
             self.params = []
             self.l1 = self.layer(self.x, xdim, hdim, tf.nn.tanh)
-            #self.l2 = self.layer(self.l1, hdim, hdim, tf.nn.tanh)
+            #self.l2 = self.layer(self.l1, hdim, hdim, tf.nn.relu)
             self.y = self.layer(self.l1, hdim, ydim, None)
 
             self.cost = tf.reduce_mean(tf.square(self.y - self.t))

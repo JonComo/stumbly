@@ -214,8 +214,6 @@ class Engine(object):
             for j in data['joints']:
                 self.load_joint(j)
 
-        print('File loaded: {}'.format(filename))
-
     def clear_all_but_ground(self):
         for b in self.world.bodies:
             if b.userData:

@@ -48,7 +48,7 @@ class Engine(object):
                 if isinstance(shape, polygonShape):
                     vertices = [(body.transform * v) * self.ppm for v in shape.vertices]
                     vertices = [(v[0], self.height - v[1]) for v in vertices]
-                    pygame.draw.polygon(self.screen, self.colors[body.type], vertices, 2)
+                    pygame.draw.polygon(self.screen, self.colors[body.type], vertices, 4)
                 elif isinstance(shape, circleShape):
                     pos = self.to_screen(body.position)
                     radius = int(shape.radius * self.ppm)
@@ -208,6 +208,7 @@ class Engine(object):
     def load(self, filename='model.json'):
         with open(filename, 'r') as fp:
             data = json.load(fp)
+            self.file_data = data
             self.load_settings(data['_settings'])
             for b in data['bodies']:
                 self.load_body(b)

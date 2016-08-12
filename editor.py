@@ -1,5 +1,5 @@
 from engine import Engine
-from pygame import (K_RIGHT, K_LEFT, K_UP, K_DOWN, K_r, K_s, K_p, K_f)
+from pygame import (K_RIGHT, K_LEFT, K_UP, K_DOWN, K_r, K_s, K_p, K_f, K_b)
 
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, circleShape, fixtureDef, transform, revoluteJoint)
 from Box2D.b2 import (pi, filter)
@@ -38,8 +38,6 @@ class Editor(object):
             self.selected.awake = True
             self.mouse_joint = self.engine.world.CreateMouseJoint(bodyA=self.ground, bodyB=self.selected, \
                 target=self.engine.to_pybox2d(self.engine.mouse), maxForce=1000.0 * self.selected.mass)
-        else:
-            self.engine.add_dynamic_body(self.engine.mouse, (S_STEP * 3, S_STEP * 2))
 
     def mouse_released(self):
         self.selected = None
@@ -67,6 +65,8 @@ class Editor(object):
             joint = self.engine.pin_at(self.engine.mouse)
         if keys[K_s]:
             self.engine.save(self.filename)
+        if keys[K_b]:
+            self.engine.add_dynamic_body(self.engine.mouse, (S_STEP * 3, S_STEP * 2))
 
 
 if __name__ == "__main__":

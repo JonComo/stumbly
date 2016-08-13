@@ -1,13 +1,11 @@
 # stumbly
 
-Exploring reinforcment learning, specifically q function approximation with a two (or more!) layer neural network. 
+Exploring reinforcment learning, specifically q function approximation with a two (or more!) layer neural network and hill climbing algorithms. 
 
-![Go stumbly go](stumbling.gif?raw=true "Stumbly")
-
-All to help stumbly learn to walk! :-)
+All to help stumbly (or your very own creature) learn to walk! :-)
 
 Includes:
-A quick and dirty creature creator/editor using pybox2d for physics and pygame for rendering. Checkout the notebooks to see how to run everything. I'm currently adding back in the RL code, was cleaning up editor and engine code.
+A quick and dirty creature creator/editor using pybox2d for physics and pygame for rendering. Checkout the notebooks to see how to run everything.
 
 Here's a [video](https://www.youtube.com/watch?v=uZbVM4TP0IY) of the creature creator.
 

@@ -40,22 +40,27 @@ class Engine(object):
     def to_screen(self, p):
         return [p[0]*self.ppm, self.height-p[1]*self.ppm]
 
-    def render(self):
+    def draw_circle(self, p, r, c):
+        pygame.draw.circle(self.screen, c, p, int(r), 2)
+
+    def clear_screen(self):
         self.screen.fill((0, 0, 0))
+
+    def render(self):
         for body in self.world.bodies:
             for fixture in body.fixtures:
                 shape = fixture.shape
                 if isinstance(shape, polygonShape):
                     vertices = [(body.transform * v) * self.ppm for v in shape.vertices]
                     vertices = [(v[0], self.height - v[1]) for v in vertices]
-                    pygame.draw.polygon(self.screen, self.colors[body.type], vertices, 4)
+                    pygame.draw.polygon(self.screen, self.colors[body.type], vertices, 3)
                 elif isinstance(shape, circleShape):
                     pos = self.to_screen(body.position)
                     radius = int(shape.radius * self.ppm)
-                    pygame.draw.circle(self.screen, self.colors[body.type], (int(pos[0]), int(pos[1])), radius, 2)
+                    self.draw_circle((int(pos[0]), int(pos[1])), radius, self.colors[body.type])
         for joint in self.world.joints:
             p = self.to_screen(joint.anchorA)
-            pygame.draw.circle(self.screen, self.colors['joint'], (int(p[0]), int(p[1])), int(.5 * self.ppm), 2)
+            self.draw_circle((int(p[0]), int(p[1])), int(.5 * self.ppm), self.colors['joint'])
         pygame.display.flip()
 
     def step_physics(self, steps=1):

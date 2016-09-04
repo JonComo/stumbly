@@ -98,6 +98,7 @@ class Engine(object):
 
     def update(self):
         self.step_physics(1)
+        self.clear_screen()
         self.render()
         self.clock_tick()
 

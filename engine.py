@@ -11,8 +11,8 @@ from uuid import uuid4
 
 class Engine(object):
     def __init__(self, ppm=20, fps=60, width=640, height=480, gravity=(0, 0), \
-     caption="Window", joint_limit=False, lower_angle=-.5*b2_pi, upper_angle=.5*b2_pi, \
-     linear_damping=0.0, angular_damping=0.0):
+     caption="Window", joint_limit=False, lower_angle=-.5*b2_pi, upper_angle=.5*b2_pi, max_torque=10000, \
+     linear_damping=0.0, angular_damping=0.0, enable_mouse_joint=True):
         pygame.init()
         self.ppm = ppm # pixels per meter
         self.width = width
@@ -28,8 +28,19 @@ class Engine(object):
         self.joint_limit = joint_limit
         self.lower_angle = lower_angle
         self.upper_angle = upper_angle
+        self.max_torque = max_torque
         self.mouse = (0, 0)
+        self.enable_mouse_joint = enable_mouse_joint
+        self.selected = None
+        self.mouse_joint = None
         pygame.display.set_caption(caption)
+
+        self.joints = []
+        self.bodies = []
+
+        # create ground
+        self.ground = self.add_static_body(p=(self.width/2, self.height-10), \
+            size=(self.width, 30))
 
     def to_pybox2d(self, p):
         return [p[0]/self.ppm, (self.height-p[1])/self.ppm]
@@ -70,7 +81,7 @@ class Engine(object):
     def run(self, callback=None, key_pressed=None, mouse_pressed=None, mouse_released=None):
         running = True
         while running:
-            self.mouse = pygame.mouse.get_pos()
+            self.update_mouse()
             for event in self.events():
                 if self.quit_event(event):
                     running = False
@@ -79,16 +90,26 @@ class Engine(object):
                     if key_pressed:
                         key_pressed(pygame.key.get_pressed())
                 if event.type == MOUSEBUTTONDOWN:
+                    if self.enable_mouse_joint:
+                        self.create_mouse_joint()
                     if mouse_pressed:
                         mouse_pressed()
                 if event.type == MOUSEBUTTONUP:
+                    if self.enable_mouse_joint:
+                        self.destroy_mouse_joint()
                     if mouse_released:
                         mouse_released()
+
+            self.update_mouse_joint()
+
             if callback:
                 callback()
 
             self.update()
         self.close()
+
+    def update_mouse(self):
+        self.mouse = pygame.mouse.get_pos()
 
     def events(self):
         return pygame.event.get()
@@ -108,6 +129,43 @@ class Engine(object):
     def close(self):
         pygame.quit()
 
+    def create_mouse_joint(self):
+        bodies = self.bodies_at(self.mouse)
+        if len(bodies) > 0:
+            self.selected = bodies[0]
+            self.selected.awake = True
+            self.mouse_joint = self.world.CreateMouseJoint(bodyA=self.ground, bodyB=self.selected, \
+                target=self.to_pybox2d(self.mouse), maxForce=1000.0 * self.selected.mass)
+
+    def destroy_mouse_joint(self):
+        self.selected = None
+        if self.mouse_joint:
+            self.world.DestroyJoint(self.mouse_joint)
+            self.mouse_joint = None
+
+    def update_mouse_joint(self):
+        if self.mouse_joint:
+            self.mouse_joint.target = self.to_pybox2d(self.mouse)
+
+    def body_position(self):
+        x = 0
+        y = 0
+        for b in self.bodies:
+            x += b.position[0]
+            y += b.position[1]
+        cnt = len(self.bodies)
+        return self.to_screen([x/cnt, y/cnt])
+
+    def set_position(self, p, zero_vel=True):
+        c = self.to_pybox2d(self.body_position())
+        p = self.to_pybox2d(p)
+        shift = (p[0] - c[0], p[1] - c[1])
+        for b in self.bodies:
+            if zero_vel:
+                b.linearVelocity = (0, 0)
+                b.angularVelocity = 0
+            b.position = (b.position[0] + shift[0], b.position[1] + shift[1])
+
     def add_static_body(self, p, size):
         return self.world.CreateStaticBody(position=self.to_pybox2d(p), \
             shapes=polygonShape(box=self.size_to_pybox2d(size), friction=1.0))
@@ -115,13 +173,13 @@ class Engine(object):
     def bodies_at(self, p):
         p = self.to_pybox2d(p)
         bodies = []
-        for body in self.world.bodies:
+        for body in self.bodies:
             if body.fixtures[0].shape.TestPoint(body.transform, p):
                 bodies.append(body)
         return bodies
 
     def body_with_uuid(self, uuid):
-        for body in self.world.bodies:
+        for body in self.bodies:
             if body.userData and isinstance(body.userData, dict):
                 if body.userData['uuid'] == uuid:
                     return body
@@ -135,6 +193,7 @@ class Engine(object):
         uuid = uuid if uuid else str(uuid4())
         body.userData['uuid'] = uuid
         self.set_box(body, size)
+        self.bodies.append(body)
         return body
 
     def set_box(self, body, size):
@@ -159,23 +218,16 @@ class Engine(object):
             b1 = bodies[0]
             b2 = bodies[1]
             joint = self.world.CreateRevoluteJoint(bodyA=b1, bodyB=b2, anchor=self.to_pybox2d(p), 
-                maxMotorTorque = 10000.0,
+                maxMotorTorque = self.max_torque,
                 motorSpeed = 0.0,
                 enableMotor = True,
                 upperAngle = self.upper_angle,
                 lowerAngle = self.lower_angle,
                 enableLimit = self.joint_limit
                 )
+            self.joints.append(joint)
             return joint
         return None
-
-    def add_sensor(self, pos):
-        """bodies = self.bodies_at(pos)
-        if len(bodies) > 0:
-            body = bodies[0]
-            body.CreateFixture(fixtureDef(shape=circleShape(pos=(10, 2), radius=1)))
-            print('created sensor')"""
-        raise NotImplementedError()
 
     def body_data(self, body):
         return {'p': (body.position[0], body.position[1]), \
@@ -200,10 +252,10 @@ class Engine(object):
 
     def save(self, filename='model.json'):
         data = {'_settings': self.settings_data(), 'bodies': [], 'joints': []}
-        for body in self.world.bodies:
+        for body in self.bodies:
             if body.userData:
                 data['bodies'].append(self.body_data(body))
-        for joint in self.world.joints:
+        for joint in self.joints:
             data['joints'].append(self.joint_data(joint))
 
         with open(filename, 'w') as fp:
@@ -222,9 +274,10 @@ class Engine(object):
                 self.load_joint(j)
 
     def clear_all_but_ground(self):
-        for b in self.world.bodies:
-            if b.userData:
-                self.world.DestroyBody(b)
+        for b in self.bodies:
+            self.world.DestroyBody(b)
+        self.bodies = []
+        self.joints = []
 
 if __name__ == "__main__":
     print('Welcome to the experimental pygame + pybox2d engine!')

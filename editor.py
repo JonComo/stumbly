@@ -12,10 +12,6 @@ class Editor(object):
     def __init__(self):
         self.engine = Engine(width=1280, height=720, gravity=(0, 0), \
             linear_damping=10.0, angular_damping=10.0, caption='Editor')
-        self.ground = self.engine.add_static_body(p=(self.engine.width/2, self.engine.height-10), \
-            size=(self.engine.width, 30))
-        self.selected = None # selected physics body
-        self.mouse_joint = None
 
     def load(self, filename='model.json'):
         self.filename = filename
@@ -24,30 +20,11 @@ class Editor(object):
             self.engine.load(self.filename)
 
     def run(self):
-        self.engine.run(callback=self.callback, mouse_pressed=self.mouse_pressed, \
-            mouse_released=self.mouse_released, key_pressed=self.key_pressed)
-
-    def callback(self):
-        if self.mouse_joint:
-            self.mouse_joint.target = self.engine.to_pybox2d(self.engine.mouse)
-
-    def mouse_pressed(self):
-        bodies = self.engine.bodies_at(self.engine.mouse)
-        if len(bodies) > 0:
-            self.selected = bodies[0]
-            self.selected.awake = True
-            self.mouse_joint = self.engine.world.CreateMouseJoint(bodyA=self.ground, bodyB=self.selected, \
-                target=self.engine.to_pybox2d(self.engine.mouse), maxForce=1000.0 * self.selected.mass)
-
-    def mouse_released(self):
-        self.selected = None
-        if self.mouse_joint:
-            self.engine.world.DestroyJoint(self.mouse_joint)
-            self.mouse_joint = None
+        self.engine.run(key_pressed=self.key_pressed)
 
     def key_pressed(self, keys):
-        if self.selected:
-            s = self.selected.userData['size']
+        if self.engine.selected:
+            s = self.engine.selected.userData['size']
             s = (s[0]*self.engine.ppm, s[1]*self.engine.ppm)
             if keys[K_RIGHT]:
                 s = (s[0] + S_STEP, s[1])
@@ -58,9 +35,7 @@ class Editor(object):
             if keys[K_DOWN]:
                 s = (s[0], s[1] - S_STEP)
             s = (int(max(S_STEP, s[0])), int(max(S_STEP, s[1])))
-            self.engine.set_box(self.selected, s)
-        if keys[K_f]:
-            self.engine.add_sensor(self.engine.mouse)
+            self.engine.set_box(self.engine.selected, s)
         if keys[K_p]:
             joint = self.engine.pin_at(self.engine.mouse)
         if keys[K_s]:

@@ -54,6 +54,9 @@ class Engine(object):
     def draw_circle(self, p, r, c):
         pygame.draw.circle(self.screen, c, p, int(r), 2)
 
+    def draw_rect(self, r, w, c):
+        pygame.draw.rect(self.screen, c, r, w)
+
     def clear_screen(self):
         self.screen.fill((0, 0, 0))
 

@@ -277,6 +277,7 @@ class Engine(object):
                 self.load_joint(j)
 
     def clear_all_but_ground(self):
+        self.destroy_mouse_joint()
         for b in self.bodies:
             self.world.DestroyBody(b)
         self.bodies = []

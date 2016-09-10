@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.ndimage
 
 import pyglet
 from pyglet import gl
@@ -21,7 +20,6 @@ PAD = 12
 # http://stackoverflow.com/questions/9035712/numpy-array-is-shown-incorrect-with-pyglet
 def tex_from_m(m, resize=4):
     m = m.T
-    #m = scipy.ndimage.zoom(m, 4, order=0)
     shape = m.shape
 
     m = np.clip(m, -1, 1)

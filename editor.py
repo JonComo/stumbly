@@ -1,12 +1,17 @@
 from engine import Engine
-from pygame import (K_RIGHT, K_LEFT, K_UP, K_DOWN, K_r, K_s, K_p, K_f, K_b)
-
-from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, circleShape, fixtureDef, transform, revoluteJoint)
-from Box2D.b2 import (pi, filter)
+import pyglet
+from pyglet.window import key
 
 import os
 
 S_STEP = 5 # shape step size
+
+print('Welcome to the experimental pyglet+pybox2d creature editor!')
+print('- B to add a dynamic body')
+print('- Drag to move bodies')
+print('- P to pin bodies together at the current mouse position')
+print('- Arrow keys to change the size of the selected body (width, height)')
+print('- S to save models as model.json (or whatever filename you passed in load) in the current directory')
 
 class Editor(object):
     def __init__(self):
@@ -20,38 +25,47 @@ class Editor(object):
             self.engine.load(self.filename)
 
     def run(self):
-        self.engine.run(key_pressed=self.key_pressed)
+        e = self.engine
+        while not e.exited():
+            e.window.dispatch_events()
+            e.window.clear()
+            if e.window.mouse_pressed:
+                e.create_mouse_joint()
+            else:
+                e.destroy_mouse_joint()
+            self.handle_keys()
+            e.update_mouse_joint()
+            e.step_physics(1)
+            e.render()
+            pyglet.clock.tick()
+        e.window.close()
 
-    def key_pressed(self, keys):
-        if self.engine.selected:
-            s = self.engine.selected.userData['size']
-            s = (s[0]*self.engine.ppm, s[1]*self.engine.ppm)
-            if keys[K_RIGHT]:
+    def handle_keys(self):
+        e = self.engine
+        if e.selected:
+            s = e.selected.userData['size']
+            s = (s[0]*e.ppm, s[1]*e.ppm)
+            if e.window.pressed(key.RIGHT):
                 s = (s[0] + S_STEP, s[1])
-            if keys[K_LEFT]:
+            if e.window.pressed(key.LEFT):
                 s = (s[0] - S_STEP, s[1])
-            if keys[K_UP]:
+            if e.window.pressed(key.UP):
                 s = (s[0], s[1] + S_STEP)
-            if keys[K_DOWN]:
+            if e.window.pressed(key.DOWN):
                 s = (s[0], s[1] - S_STEP)
             s = (int(max(S_STEP, s[0])), int(max(S_STEP, s[1])))
-            self.engine.set_box(self.engine.selected, s)
-        if keys[K_p]:
-            joint = self.engine.pin_at(self.engine.mouse)
-        if keys[K_s]:
-            self.engine.save(self.filename)
-        if keys[K_b]:
-            self.engine.add_dynamic_body(self.engine.mouse, (S_STEP * 3, S_STEP * 2))
+            e.set_box(e.selected, s)
+        if e.window.pressed(key.P):
+            joint = e.pin_at(e.window.mouse)
+        if e.window.pressed(key.S):
+            e.save(self.filename)
+        if e.window.pressed(key.B):
+            e.add_dynamic_body(e.window.mouse, (S_STEP * 3, S_STEP * 2))
+        e.window.reset_keys()
 
 
 if __name__ == "__main__":
-    print('Welcome to the experimental pybox2d editor!')
-    print('- Click to add a dynamic body')
-    print('- Drag to move bodies')
-    print('- \'P\' to pin bodies together at the current mouse position')
-    print('- Arrow keys to change the size of the selected body (width, height)')
-    print('- \'S\' to save models as model.json in the current directory')
-
     editor = Editor()
+
     editor.load('model.json')
     editor.run()

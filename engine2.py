@@ -52,6 +52,7 @@ class Window(pyglet.window.Window):
         self.mouse_pressed = False
         self.mouse = (0, 0)
         self.label = None
+        self.texture_cache = None # used for rendering weight/grad matrices
 
     def pressed(self, key):
         if key in self.keys:
@@ -143,15 +144,17 @@ class Window(pyglet.window.Window):
                           font_size=size,
                           x=p[0], y=p[1],
                           anchor_x='left', anchor_y='bottom')
-
-    def render_matrix(self, m, p):
-        texture = tex_from_m(m)
-        texture.blit(p[0], p[1])
         
-    def render_matrices(self, M, x=10, y=710):
-        for m in M:
-            self.render_matrix(m, (x, y-m.shape[0]*4))
-            x += m.shape[1] * 4 + 10
+    def draw_matrices(self, M, x=10, y=710, recalc=True):
+        if recalc:
+            self.texture_cache = None
+
+        if not self.texture_cache:
+            self.texture_cache = [tex_from_m(m) for m in M]
+
+        for t in self.texture_cache:
+            t.blit(x, y-t.height)
+            x += t.width + 10
 
 class Engine(object):
     def __init__(self, ppm=20, fps=60, width=640, height=480, gravity=(0, 0), \

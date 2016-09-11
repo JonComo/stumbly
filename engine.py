@@ -52,6 +52,10 @@ class Window(pyglet.window.Window):
         self.mouse = (0, 0)
         self.label = None
         self.texture_cache = None # used for rendering weight/grad matrices
+        self.set_line_width(3.0)
+
+    def set_line_width(self, width):
+        pyglet.gl.glLineWidth(width)
 
     def pressed(self, key):
         if key in self.keys:
@@ -195,16 +199,47 @@ class Engine(object):
         return [p[0]*self.ppm, p[1]*self.ppm]
 
     def render(self):
+        self.window.set_line_width(2.0)
         for body in self.world.bodies:
             for fixture in body.fixtures:
                 shape = fixture.shape
                 if isinstance(shape, polygonShape):
                     vertices = [(body.transform * v) * self.ppm for v in shape.vertices]
-                    self.window.draw_poly(vertices, self.colors[0])
-        for joint in self.world.joints:
-            p = self.to_window(joint.anchorA)
-            tri = ((p[0]-5, p[1]-5), (p[0]+5, p[1]-5), (p[0], p[1]+5))
-            self.window.draw_poly(tri, self.colors[1])
+                    if body == self.selected:
+                        self.window.draw_poly(vertices, self.colors[1])
+                    else:
+                        self.window.draw_poly(vertices, self.colors[0])
+
+        self.window.set_line_width(2.0)
+        for joint in self.joints:
+            if joint.limitEnabled:
+                p = self.to_window(joint.anchorA)
+                l = self.ppm
+                rot = -np.pi/2
+                lower = joint.limits[0] - rot
+                upper = joint.limits[1] - rot
+                current = joint.angle - rot
+                
+                center = (p[0], p[1])
+
+                tri = [center]
+                tri += [(p[0] + np.cos(lower) * l, p[1] + np.sin(lower) * l)]
+                tri += [center]
+                tri += [(p[0] + np.cos(upper) * l, p[1] + np.sin(upper) * l)]
+
+                cur = [tri[0]]
+                cur += [(p[0] + np.cos(current) * l, p[1] + np.sin(current) * l)]
+                self.window.draw_poly(tri, self.colors[1])
+                self.window.draw_poly(cur, self.colors[0])
+            else:
+                p = self.to_window(joint.anchorA)
+                l = self.ppm/4
+                
+                tri = [(p[0]-l, p[1]-l)]
+                tri += [(p[0]+l, p[1]-l)]
+                tri += [(p[0], p[1]+l)]
+
+                self.window.draw_poly(tri, self.colors[1])
         
         if self.window.label:
             self.window.label.draw()

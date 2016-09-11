@@ -15,11 +15,10 @@ from uuid import uuid4
 # Disable error checking for increased performance
 # pyglet.options['debug_gl'] = False
 
-PAD = 12
 
 # http://stackoverflow.com/questions/9035712/numpy-array-is-shown-incorrect-with-pyglet
 def tex_from_m(m, resize=4):
-    m = m.T
+    #m = m.T
     shape = m.shape
 
     m = np.clip(m, -1, 1)
@@ -29,20 +28,20 @@ def tex_from_m(m, resize=4):
     m *= 255
 
     # we need to flatten the array
-    m = m.flatten()
+    m.shape = -1
 
     # convert to GLubytes
     tex_data = (gl.GLubyte * m.size)( *m.astype('uint8') )
 
     # create an image
     # pitch is 'texture width * number of channels per element * per channel size in bytes'
-    img = pyglet.image.ImageData(shape[0], shape[1], "I", tex_data, pitch = shape[0] * 1 * 1)
+    img = pyglet.image.ImageData(shape[1], shape[0], "I", tex_data, pitch = shape[1] * 1 * 1)
 
     texture = img.get_texture()   
     gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)   
 
-    texture.width = shape[0] * resize                                                                                                                                                            
-    texture.height = shape[1] * resize                                                                                                                                                                                                                                                                                                                       
+    texture.width = shape[1] * resize                                                                                                                                                            
+    texture.height = -shape[0] * resize                                                                                                                                                                                                                                                                                                                       
     return texture
 
 class Window(pyglet.window.Window):
@@ -153,7 +152,7 @@ class Window(pyglet.window.Window):
             self.texture_cache = [tex_from_m(m) for m in M]
 
         for t in self.texture_cache:
-            t.blit(x, y-t.height)
+            t.blit(x, y)
             x += t.width + 10
 
 class Engine(object):

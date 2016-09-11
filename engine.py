@@ -310,6 +310,18 @@ class Engine(object):
                 bodies.append(body)
         return bodies
 
+    def joint_at(self, p, limit=1):
+        p = self.to_pybox2d(p)
+        dist = limit
+        best_j = None
+        for j in self.joints:
+            jp = j.anchorA
+            d = (p[0] - jp[0])**2 + (p[1] - jp[1])**2
+            if d < dist:
+                dist = d
+                best_j = j
+        return best_j
+
     def body_with_uuid(self, uuid):
         for body in self.bodies:
             if body.userData and isinstance(body.userData, dict):
@@ -339,7 +351,7 @@ class Engine(object):
         return self.world.CreateStaticBody(position=self.to_pybox2d(p), \
             shapes=polygonShape(box=self.size_to_pybox2d(size)))
 
-    def pin_at(self, p, a_uuid=None, b_uuid=None):
+    def pin_at(self, p, a_uuid=None, b_uuid=None, ll=None, ul=None):
         bodies = []
         if a_uuid and b_uuid:
             bodies = [self.body_with_uuid(a_uuid), self.body_with_uuid(b_uuid)]
@@ -353,8 +365,8 @@ class Engine(object):
                 maxMotorTorque = self.max_torque,
                 motorSpeed = 0.0,
                 enableMotor = True,
-                upperAngle = self.upper_angle,
-                lowerAngle = self.lower_angle,
+                upperAngle = ul if ul else self.upper_angle,
+                lowerAngle = ll if ll else self.lower_angle,
                 enableLimit = self.joint_limit
                 )
             self.joints.append(joint)
@@ -367,14 +379,20 @@ class Engine(object):
 
     def joint_data(self, joint):
         return {'p': (joint.anchorA[0], joint.anchorA[1]), 'a_uuid': joint.bodyA.userData['uuid'], \
-            'b_uuid': joint.bodyB.userData['uuid']}
+            'b_uuid': joint.bodyB.userData['uuid'], 'll': joint.limits[0], 'ul': joint.limits[1]}
 
     def load_body(self, d):
         self.add_dynamic_body(self.to_window(d['p']), (d['size'][0] * self.ppm, \
             d['size'][1] * self.ppm), angle=d['angle'], uuid=d['uuid'])
 
     def load_joint(self, d):
-        self.pin_at(self.to_window(d['p']), a_uuid=d['a_uuid'], b_uuid=d['b_uuid'])
+        ul = None
+        ll = None
+        if 'ul' in d and 'll' in d:
+            ul = d['ul']
+            ll = d['ll']
+        self.pin_at(self.to_window(d['p']), a_uuid=d['a_uuid'], b_uuid=d['b_uuid'], \
+         ll=ll, ul=ul)
 
     def settings_data(self):
         return {}

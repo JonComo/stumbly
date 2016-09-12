@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 S_STEP = 5 # shape step size
-J_STEP = np.pi/10 # joint limit step size (radians)
+J_STEP = np.pi/20 # joint limit step size (radians)
 
 print('Welcome to the experimental pyglet+pybox2d creature editor!')
 print('- B to add a dynamic body')

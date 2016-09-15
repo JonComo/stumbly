@@ -305,7 +305,7 @@ class Engine(object):
     def bodies_at(self, p):
         p = self.to_pybox2d(p)
         bodies = []
-        for body in self.bodies:
+        for body in self.world.bodies:
             if body.fixtures[0].shape.TestPoint(body.transform, p):
                 bodies.append(body)
         return bodies
@@ -329,27 +329,34 @@ class Engine(object):
                     return body
         return None
 
-    def add_dynamic_body(self, p, size, angle=0, uuid=None):
+    def add_dynamic_body(self, p, size, angle=0, uuid=None, creature=True):
         body = self.world.CreateDynamicBody(position=self.to_pybox2d(p), angle=angle)
         body.userData = {}
         body.linearDamping = self.linear_damping
         body.angularDamping = self.angular_damping
+        body.allowSleep = False
         uuid = uuid if uuid else str(uuid4())
         body.userData['uuid'] = uuid
-        self.set_box(body, size)
-        self.bodies.append(body)
+        group = -2 if creature else 1
+        self.set_box(body, size, group)
+        if creature:
+            self.bodies.append(body)
         return body
 
-    def set_box(self, body, size):
+    def set_box(self, body, size, group=-2):
         while len(body.fixtures) > 0:
             body.DestroyFixture(body.fixtures[0])
         size = self.size_to_pybox2d(size)
-        body.CreatePolygonFixture(box=size, density=1, friction=1.0, filter=b2Filter(groupIndex=-2))
+        body.CreatePolygonFixture(box=size, density=1, friction=1.0, filter=b2Filter(groupIndex=group))
         body.userData['size'] = size
 
     def add_static_body(self, p, size):
         return self.world.CreateStaticBody(position=self.to_pybox2d(p), \
             shapes=polygonShape(box=self.size_to_pybox2d(size)))
+
+    def add_walls(self):
+        self.add_static_body((-5, self.height/2), (10, self.height))
+        self.add_static_body((self.width + 5, self.height/2), (10, self.height))
 
     def pin_at(self, p, a_uuid=None, b_uuid=None, ll=None, ul=None):
         bodies = []

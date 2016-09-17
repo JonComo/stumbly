@@ -171,6 +171,7 @@ class Engine(object):
         self.colors = [(255, 255, 255, 255), (255, 0, 0, 255)]
         self.fps = fps
         self.timestep = 1.0 / self.fps
+        pyglet.clock.set_fps_limit(self.fps)
         self.world = world(gravity=gravity, doSleep=False)
         self.linear_damping = linear_damping
         self.angular_damping = angular_damping

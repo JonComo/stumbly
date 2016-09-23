@@ -1,8 +1,13 @@
 import numpy as np
 
 # building blocks
+
 def weights(shape):
-    return np.random.random_sample(shape) * .1 - .05
+    # xavier init!
+    #return np.random.randn(shape[0], shape[1]) / (shape[0] + shape[1])
+
+    # or not
+    return np.random.randn(shape[0], shape[1])
 
 def m(a, b):
     return np.multiply(a, b)
@@ -130,16 +135,21 @@ class LSTMNetwork(object):
     def out(self, i):
         return self.outputs[i].h
 
-    def bp(self, dys, learning_rate=0.1):
+    def grad_clear(self):
+        self.grad = {}
+
+    def bp(self, dys):
         d1 = np.zeros([1, self.h_dim]) # h horizontal
         d3 = np.zeros([1, self.h_dim]) # c
 
-        self.grad = {}
         for key in self.W:
             self.grad[key] = np.zeros_like(self.W[key])
 
         for i in reversed(range(len(dys))):
             dy = dys[i]
+
+            if dy is None:
+                break
 
             out = self.outputs[i]
             d2 = del_last(out.bp(dy, self.W['y']).dx)
@@ -159,6 +169,7 @@ class LSTMNetwork(object):
             self.grad['c'] += unit.gc.grad
             self.grad['o'] += unit.go.grad
         
+    def grad_apply(self, num_batch, learning_rate):
         # apply grads
         for key in self.W:
-            self.W[key] -= self.grad[key] * learning_rate
+            self.W[key] -= self.grad[key] / num_batch * learning_rate

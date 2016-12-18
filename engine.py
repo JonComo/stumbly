@@ -44,6 +44,25 @@ def tex_from_m(m, resize=4):
     texture.height = -shape[0] * resize                                                                                                                                                                                                                                                                                                                       
     return texture
 
+def graph_view(object):
+    def __init__(self, network):
+        """Network: list of weight matrices"""
+        self.network = network
+        self.num_nodes = network[0].shape[0] + [W.shape[1] for W in self.network]
+        self.nodes = np.random.randn(num_nodes, 2)
+
+    def fit(self, d=1):
+        """d: standard distance"""
+        nodei = 0
+        for wi, W in enumerate(network):
+            for i in range(W.shape[0]):
+                ni = self.nodes[nodei]
+                for j in range(W.shape[1]):
+                    nj = self.nodes[j]
+                nodei += 1
+
+
+
 class Window(pyglet.window.Window):
     def __init__(self, *args, **kwargs):
         super(Window, self).__init__(*args, **kwargs)

@@ -12,6 +12,8 @@ And some [learning](https://www.youtube.com/watch?v=jgQcg9Zl5Y8)
 
 You need these things to run it all:
 
+Python 3.4
+
 [jupyter notebook](http://jupyter.org/)
 
 [pybox2d](https://github.com/pybox2d/pybox2d)

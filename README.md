@@ -22,6 +22,7 @@ Python 3.4
 
 [numpy](http://www.scipy.org/scipylib/download.html)
 
+[matplotlib](http://matplotlib.org/)
 
 Happy to hear any improvements/suggestions!
 
